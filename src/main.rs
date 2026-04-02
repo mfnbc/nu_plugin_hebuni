@@ -2,9 +2,7 @@ use nu_plugin::{
     serve_plugin, EngineInterface, EvaluatedCall, MsgPackSerializer, Plugin, PluginCommand,
     SimplePluginCommand,
 };
-use nu_protocol::{
-    Category, LabeledError, Record, Signature, Span, SyntaxShape, Type, Value,
-};
+use nu_protocol::{Category, LabeledError, Record, Signature, Span, SyntaxShape, Type, Value};
 use std::collections::HashSet;
 use std::iter::once;
 use unicode_normalization::UnicodeNormalization;
@@ -19,10 +17,7 @@ impl Plugin for HebuniPlugin {
     }
 
     fn commands(&self) -> Vec<Box<dyn PluginCommand<Plugin = Self>>> {
-        vec![
-            Box::new(ScalarStrip::new()),
-            Box::new(Recompose::new()),
-        ]
+        vec![Box::new(ScalarStrip::new()), Box::new(Recompose::new())]
     }
 }
 
@@ -31,13 +26,17 @@ impl Plugin for HebuniPlugin {
 struct ScalarStrip;
 
 impl ScalarStrip {
-    fn new() -> Self { Self }
+    fn new() -> Self {
+        Self
+    }
 }
 
 impl SimplePluginCommand for ScalarStrip {
     type Plugin = HebuniPlugin;
 
-    fn name(&self) -> &str { "hebuni scalar-strip" }
+    fn name(&self) -> &str {
+        "hebuni scalar-strip"
+    }
 
     fn signature(&self) -> Signature {
         Signature::build(PluginCommand::name(self))
@@ -85,13 +84,17 @@ goes into stripped regardless of its meaning.  normalize.nu applies all rules."
 struct Recompose;
 
 impl Recompose {
-    fn new() -> Self { Self }
+    fn new() -> Self {
+        Self
+    }
 }
 
 impl SimplePluginCommand for Recompose {
     type Plugin = HebuniPlugin;
 
-    fn name(&self) -> &str { "hebuni recompose" }
+    fn name(&self) -> &str {
+        "hebuni recompose"
+    }
 
     fn signature(&self) -> Signature {
         Signature::build(PluginCommand::name(self))
@@ -114,13 +117,13 @@ impl SimplePluginCommand for Recompose {
     }
 
     fn extra_description(&self) -> &str {
-        "Pure Unicode recomposer. Knows nothing about Hebrew.
+        "Hebrew-specific recomposer helper.
 Given a flat list of NFC scalar strings and a list of indices to keep,
 filters to only those scalars, joins them in order, applies a final NFC
 normalization pass, and returns the result.
 
-All linguistic decisions (which scalars belong in the structural form)
-are made by the caller. This command only assembles the result."
+The command itself does not infer Hebrew structure; the caller decides
+which scalars belong in the structural form."
     }
 
     fn run(
@@ -140,10 +143,16 @@ are made by the caller. This command only assembles the result."
                 .into_iter()
                 .map(|v| v.as_str().map(|s| s.to_owned()))
                 .collect::<Result<Vec<_>, _>>()
-                .map_err(|e| LabeledError::new(e.to_string()).with_label("nfc_chars must be list<string>", span))?,
-            other => return Err(LabeledError::new(
-                format!("expected list, got {:?}", other.get_type())
-            ).with_label("nfc_chars must be a list<string>", span)),
+                .map_err(|e| {
+                    LabeledError::new(e.to_string())
+                        .with_label("nfc_chars must be list<string>", span)
+                })?,
+            other => {
+                return Err(
+                    LabeledError::new(format!("expected list, got {:?}", other.get_type()))
+                        .with_label("nfc_chars must be a list<string>", span),
+                )
+            }
         };
 
         let keep_indices: HashSet<usize> = match keep_indices_val {
@@ -151,10 +160,16 @@ are made by the caller. This command only assembles the result."
                 .into_iter()
                 .map(|v| v.as_int().map(|i| i as usize))
                 .collect::<Result<HashSet<_>, _>>()
-                .map_err(|e| LabeledError::new(e.to_string()).with_label("keep_indices must be list<int>", span))?,
-            other => return Err(LabeledError::new(
-                format!("expected list, got {:?}", other.get_type())
-            ).with_label("keep_indices must be a list<int>", span)),
+                .map_err(|e| {
+                    LabeledError::new(e.to_string())
+                        .with_label("keep_indices must be list<int>", span)
+                })?,
+            other => {
+                return Err(
+                    LabeledError::new(format!("expected list, got {:?}", other.get_type()))
+                        .with_label("keep_indices must be a list<int>", span),
+                )
+            }
         };
 
         let result = recompose(&nfc_chars, &keep_indices);
@@ -199,10 +214,10 @@ fn scalar_strip(surface: &str, span: Span) -> Result<Value, String> {
     }
 
     let mut rec = Record::new();
-    rec.insert("surface",    Value::string(surface, span));
+    rec.insert("surface", Value::string(surface, span));
     rec.insert("consonants", Value::string(consonants, span));
-    rec.insert("nfc_chars",  Value::list(nfc_chars, span));
-    rec.insert("stripped",   Value::list(stripped, span));
+    rec.insert("nfc_chars", Value::list(nfc_chars, span));
+    rec.insert("stripped", Value::list(stripped, span));
 
     Ok(Value::record(rec, span))
 }
@@ -237,12 +252,12 @@ fn make_stripped_record(
     span: Span,
 ) -> Value {
     let mut rec = Record::new();
-    rec.insert("abs_pos",    Value::int(abs_pos, span));
-    rec.insert("byte_pos",   Value::int(byte_pos, span));
+    rec.insert("abs_pos", Value::int(abs_pos, span));
+    rec.insert("byte_pos", Value::int(byte_pos, span));
     rec.insert("after_cons", Value::int(after_cons, span));
-    rec.insert("ch",         Value::string(ch, span));
-    rec.insert("cp",         Value::int(cp as i64, span));
-    rec.insert("cp_hex",     Value::string(cp_hex, span));
+    rec.insert("ch", Value::string(ch, span));
+    rec.insert("cp", Value::int(cp as i64, span));
+    rec.insert("cp_hex", Value::string(cp_hex, span));
     Value::record(rec, span)
 }
 
@@ -251,4 +266,3 @@ fn make_stripped_record(
 fn main() {
     serve_plugin(&HebuniPlugin, MsgPackSerializer);
 }
-
